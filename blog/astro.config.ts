@@ -10,6 +10,8 @@ import sitemap from "@astrojs/sitemap";
 import { unified } from "@astrojs/markdown-remark";
 import remarkToc from "remark-toc";
 import remarkCollapse from "remark-collapse";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import remarkMermaidPre from "./src/plugins/remark-mermaid-pre.mjs";
 import remarkReadingTime from "./src/plugins/remark-reading-time.mjs";
 import rehypeCallouts from "rehype-callouts";
@@ -40,12 +42,13 @@ export default defineConfig({
   markdown: {
     processor: unified({
       remarkPlugins: [
+        remarkMath,
         remarkReadingTime,
         remarkMermaidPre,
         remarkToc,
         [remarkCollapse, { test: "Table of contents" }],
       ],
-      rehypePlugins: [rehypeCallouts],
+      rehypePlugins: [rehypeKatex, rehypeCallouts],
     }),
     shikiConfig: {
       themes: { light: "min-light", dark: "night-owl" },

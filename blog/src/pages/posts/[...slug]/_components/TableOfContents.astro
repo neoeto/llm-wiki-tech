@@ -1,0 +1,267 @@
+---
+interface Props {
+  headings: Array<{ depth: number; slug: string; text: string }>;
+}
+
+const { headings } = Astro.props;
+const filtered = headings.filter((h) => h.depth >= 2 && h.depth <= 4);
+if (filtered.length === 0) return;
+
+const indentClass = (depth: number) => {
+  if (depth === 3) return "pl-3";
+  if (depth === 4) return "pl-6";
+  return "";
+};
+---
+
+<nav id="toc-desktop" class="hidden xl:block" aria-label="On this page">
+  <span class="text-sm font-semibold text-foreground block mb-3">目录</span>
+  <ul id="toc-list">
+    {
+      filtered.map((h) => (
+        <li class={indentClass(h.depth)}>
+          <a
+            href={`#${h.slug}`}
+            data-toc-slug={h.slug}
+            class:list={[
+              "block py-1 text-sm text-muted-foreground hover:text-foreground transition-colors",
+              "border-l-2 border-transparent line-clamp-2",
+            ]}
+          >
+            {h.text}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<script is:inline data-astro-rerun>
+  var tocDesktopObserver = null;
+  var tocMobileObserver = null;
+
+  function initToc() {
+    var article = document.getElementById("article");
+    if (!article) return;
+
+    // ---- Desktop toggle: floating button that hides/shows entire aside ----
+    var tocAside = document.getElementById("toc-aside");
+    var articleColumn = document.getElementById("article-column");
+
+    // Remove old desktop button on re-init
+    var oldDesktopBtn = document.getElementById("toc-desktop-toggle");
+    if (oldDesktopBtn) oldDesktopBtn.remove();
+
+    var desktopBtn = document.createElement("button");
+    desktopBtn.id = "toc-desktop-toggle";
+    desktopBtn.setAttribute("aria-label", "Toggle table of contents");
+    desktopBtn.setAttribute("aria-expanded", "true");
+    desktopBtn.setAttribute("title", "目录");
+    desktopBtn.className =
+      "hidden xl:flex fixed right-4 top-20 z-30 size-10 rounded-full bg-background border border-border shadow-lg items-center justify-center text-muted-foreground hover:text-accent transition-all duration-300";
+    desktopBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>';
+    document.body.appendChild(desktopBtn);
+
+    var desktopCollapsed = false;
+    try {
+      desktopCollapsed = localStorage.getItem("toc-collapsed") === "true";
+    } catch (e) {
+      /* ignore */
+    }
+
+    function applyDesktopCollapsed(collapsed) {
+      desktopCollapsed = collapsed;
+      try {
+        localStorage.setItem("toc-collapsed", String(collapsed));
+      } catch (e) {
+        /* ignore */
+      }
+      desktopBtn.setAttribute("aria-expanded", String(!collapsed));
+      // Hide/show the entire aside
+      if (tocAside) {
+        tocAside.style.display = collapsed ? "none" : "";
+      }
+      // Center article when collapsed, left-align when expanded
+      if (articleColumn) {
+        if (collapsed) {
+          articleColumn.style.marginLeft = "auto";
+          articleColumn.style.marginRight = "auto";
+        } else {
+          articleColumn.style.marginLeft = "";
+          articleColumn.style.marginRight = "";
+        }
+      }
+      // Rotate chevron: › when expanded (click to collapse), ‹ when collapsed (click to expand)
+      desktopBtn.style.transform = collapsed ? "rotate(180deg)" : "";
+    }
+
+    applyDesktopCollapsed(desktopCollapsed);
+
+    desktopBtn.addEventListener("click", function () {
+      applyDesktopCollapsed(!desktopCollapsed);
+    });
+
+    // ---- Mobile: create floating button ----
+    // Remove any previous mobile elements (astro:page-load re-init)
+    var oldBtn = document.getElementById("toc-mobile-btn");
+    var oldPanel = document.getElementById("toc-mobile-panel");
+    if (oldBtn) oldBtn.remove();
+    if (oldPanel) oldPanel.remove();
+
+    var mobileBtn = document.createElement("button");
+    mobileBtn.id = "toc-mobile-btn";
+    mobileBtn.setAttribute("aria-label", "Open table of contents");
+    mobileBtn.className =
+      "xl:hidden fixed bottom-8 left-4 z-50 size-14 rounded-full bg-background border border-border shadow-xl flex items-center justify-center text-foreground hover:text-accent transition-colors";
+    mobileBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 6h16" /><path d="M7 12h13" /><path d="M10 18h10" /></svg>';
+    document.body.appendChild(mobileBtn);
+
+    // ---- Mobile: create slide-out panel ----
+    var mobilePanel = document.createElement("div");
+    mobilePanel.id = "toc-mobile-panel";
+    mobilePanel.className = "xl:hidden fixed inset-0 z-50 hidden";
+    mobilePanel.setAttribute("role", "dialog");
+    mobilePanel.setAttribute("aria-modal", "true");
+    mobilePanel.setAttribute("aria-label", "Table of contents");
+    mobilePanel.innerHTML =
+      '<div id="toc-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>' +
+      '<div id="toc-drawer" class="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-background border-l border-border overflow-y-auto shadow-2xl">' +
+      '<div class="flex items-center justify-between p-4 border-b border-border">' +
+      '<span class="text-sm font-semibold text-foreground">\u76EE\u5F55</span>' +
+      '<button id="toc-close-btn" aria-label="Close table of contents" class="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>' +
+      "</button>" +
+      "</div>" +
+      '<ul class="p-4 space-y-1" id="toc-mobile-list"></ul>' +
+      "</div>";
+    document.body.appendChild(mobilePanel);
+
+    // Populate mobile list
+    var mobileList = document.getElementById("toc-mobile-list");
+    var allTocLinks = document.querySelectorAll(
+      "#toc-desktop [data-toc-slug]"
+    );
+    if (mobileList && allTocLinks.length > 0) {
+      allTocLinks.forEach(function (link) {
+        var li = document.createElement("li");
+        var parentLi = link.closest("li");
+        var depthStr = parentLi ? parentLi.className.match(/pl-(\d+)/) : null;
+        var depth = depthStr ? parseInt(depthStr[1], 10) : 0;
+        var indent = Math.min(depth, 6);
+        li.style.paddingLeft = indent + "px";
+        var a = document.createElement("a");
+        a.href = link.getAttribute("href") || "#";
+        a.setAttribute("data-toc-slug", link.getAttribute("data-toc-slug") || "");
+        a.className =
+          "block py-1 text-sm text-muted-foreground hover:text-foreground transition-colors border-l-2 border-transparent line-clamp-2";
+        a.textContent = link.textContent;
+        li.appendChild(a);
+        mobileList.appendChild(li);
+      });
+    }
+
+    // ---- Mobile panel open/close ----
+    function openPanel() {
+      mobilePanel.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closePanel() {
+      mobilePanel.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    mobileBtn.addEventListener("click", openPanel);
+
+    var closeBtn = document.getElementById("toc-close-btn");
+    var backdrop = document.getElementById("toc-backdrop");
+    if (closeBtn) closeBtn.addEventListener("click", closePanel);
+    if (backdrop) backdrop.addEventListener("click", closePanel);
+
+    // Close on Escape
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !mobilePanel.classList.contains("hidden")) {
+        closePanel();
+      }
+    });
+
+    // Close on mobile TOC link click
+    mobilePanel.addEventListener("click", function (e) {
+      var link = e.target.closest("a[data-toc-slug]");
+      if (link) {
+        closePanel();
+      }
+    });
+
+    // ---- Scroll spy via IntersectionObserver ----
+    function cleanupObservers() {
+      if (tocDesktopObserver) tocDesktopObserver.disconnect();
+      if (tocMobileObserver) tocMobileObserver.disconnect();
+      tocDesktopObserver = null;
+      tocMobileObserver = null;
+    }
+    cleanupObservers();
+
+    var headingEls = Array.from(article.querySelectorAll("h2, h3, h4"));
+
+    if (headingEls.length === 0) return;
+
+    var allLinks = document.querySelectorAll("[data-toc-slug]");
+
+    function setActive(slug) {
+      allLinks.forEach(function (link) {
+        var isActive = link.getAttribute("data-toc-slug") === slug;
+        link.classList.toggle("text-accent", isActive);
+        link.classList.toggle("font-medium", isActive);
+        link.classList.toggle("border-accent", isActive);
+        link.classList.toggle("text-muted-foreground", !isActive);
+        link.classList.toggle("border-transparent", !isActive);
+      });
+    }
+
+    // Use IntersectionObserver: detect heading nearest the top of viewport
+    tocDesktopObserver = new IntersectionObserver(
+      function (entries) {
+        var activeSlug = null;
+        // Find the first heading that is intersecting (visible in the rootMargin zone)
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            activeSlug = entries[i].target.id;
+            break;
+          }
+        }
+        // If no heading is intersecting, find the last one above the viewport
+        if (!activeSlug) {
+          for (var j = 0; j < entries.length; j++) {
+            if (entries[j].boundingClientRect.top < 0) {
+              activeSlug = entries[j].target.id;
+            }
+          }
+        }
+        // If still no active (all below viewport), use first heading
+        if (!activeSlug && entries.length > 0) {
+          activeSlug = entries[0].target.id || null;
+        }
+        if (activeSlug) {
+          setActive(activeSlug);
+        }
+      },
+      {
+        rootMargin: "-80px 0px -70% 0px",
+        threshold: 0,
+      }
+    );
+
+    headingEls.forEach(function (el) {
+      if (tocDesktopObserver) tocDesktopObserver.observe(el);
+    });
+  }
+
+  // Initialize on page load
+  initToc();
+
+  // Re-initialize on Astro View Transitions
+  document.addEventListener("astro:page-load", initToc);
+</script>
