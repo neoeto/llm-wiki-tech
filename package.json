@@ -1,0 +1,19 @@
+{
+  "name": "llm-wiki-template",
+  "version": "1.0.0",
+  "description": "基于 AI Agent 的个人知识库系统。将非结构化素材（论文、笔记、网页摘要、对话记录）自动编译为结构化、可检索、双向链接的 wiki 知识体。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitee.com:neolong88/llm-wiki-template.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
